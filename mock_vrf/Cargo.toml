@@ -1,0 +1,17 @@
+[package]
+name = "mock-vrf"
+description = "Test-only stand-in for MagicBlock VRF."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "mock_vrf"
+
+[dependencies]
+solana-program.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("custom-heap", "custom-panic"))'] }

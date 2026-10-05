@@ -1,0 +1,10 @@
+GRIDMINE
+Copyright 2026 GridMineSolana
+
+This project includes code from ORE by Regolith Labs
+(https://github.com/regolith-labs/ore, commit 48c203bd75db3cc45105ec29d8f8db719e5a2263),
+licensed under the Apache License, Version 2.0.
+
+Files in api/ and program/ are derived from the original ORE source and are
+modified from the original. Modifications are recorded in this repository's
+git history.
