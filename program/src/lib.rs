@@ -56,6 +56,7 @@ pub fn process_instruction(
         GridInstruction::SetTile => process_set_tile(accounts, data),
         GridInstruction::SetPause => process_set_pause(accounts, data),
         GridInstruction::WithdrawTeam => process_withdraw_team(accounts, data),
+        GridInstruction::SetTokenMint => process_set_token_mint(accounts, data),
         GridInstruction::ClaimVault => process_claim_vault(accounts, data),
         GridInstruction::ClaimPot => process_claim_pot(accounts, data),
         GridInstruction::BuyAsset => process_buy_asset(accounts, data),

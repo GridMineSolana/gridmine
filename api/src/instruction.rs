@@ -2,7 +2,7 @@ use steel::*;
 
 use crate::state::Params;
 
-/// PLAN §6.2: the 19 instructions.
+/// PLAN §6.2: the 20 instructions.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
 pub enum GridInstruction {
@@ -29,6 +29,7 @@ pub enum GridInstruction {
     SetTile = 16,
     SetPause = 17,
     WithdrawTeam = 18,
+    SetTokenMint = 19,
 }
 
 /// Parses instruction args. Instruction data is not 8-byte aligned after the
@@ -183,6 +184,11 @@ pub struct SetPause {
     pub paused: u64,
 }
 
+/// No args: the new mint is an account.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct SetTokenMint {}
+
 /// `bucket`: 0 = `admin_sol` to admin_collector, 1 = `team_sol` to team_collector.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
@@ -210,3 +216,4 @@ instruction!(GridInstruction, UpdateConfig);
 instruction!(GridInstruction, SetTile);
 instruction!(GridInstruction, SetPause);
 instruction!(GridInstruction, WithdrawTeam);
+instruction!(GridInstruction, SetTokenMint);

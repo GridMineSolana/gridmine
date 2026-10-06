@@ -1,7 +1,7 @@
 use grid_api::prelude::*;
 use steel::*;
 
-use crate::token::{ensure_ata, read_tile_mint};
+use crate::token::{ensure_ata, read_tile_mint, send_from_treasury};
 
 /// Creates Config, Board, Round 0, Treasury and the wSOL ATAs (Treasury + swap PDA). Starts paused.
 pub fn process_initialize(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
@@ -90,6 +90,67 @@ pub fn process_update_config(accounts: &[AccountInfo<'_>], data: &[u8]) -> Progr
     config.admin_collector = args.admin_collector;
     config.team_collector = args.team_collector;
     config.params = args.params;
+    Ok(())
+}
+
+/// Switches `$GRID` to a new mint, any time. All old-mint tokens in the Treasury go to the admin.
+/// What miners and unclosed rounds are still owed (old balance - reserve - vault `$GRID`) is paid in
+/// by the admin in new tokens, so claims keep working. Reserve and vault `$GRID` restart at 0
+/// (refill the reserve with FundReserve).
+pub fn process_set_token_mint(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
+    parse_args::<SetTokenMint>(data)?;
+    let [signer_info, config_info, treasury_info, old_mint_info, treasury_old_info, admin_old_info, new_mint_info, admin_new_info, treasury_new_info, old_program, new_program, system_program, ata_program] =
+        accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+    let config = load_config_as_admin(signer_info, config_info)?;
+    let treasury = treasury_info
+        .is_writable()?
+        .has_seeds(&[TREASURY], &grid_api::ID)?
+        .as_account_mut::<Treasury>(&grid_api::ID)?;
+    old_mint_info.has_address(&config.token_mint)?;
+    old_program.is_program(&config.token_program)?;
+    new_program.is_program(new_mint_info.owner)?;
+    system_program.is_program(&system_program::ID)?;
+    ata_program.is_program(&spl_associated_token_account::ID)?;
+    let new_mint = *new_mint_info.key;
+    if new_mint == config.token_mint || new_mint == SOL_MINT || config.tiles.iter().any(|t| t.mint == new_mint) {
+        return Err(GridError::UnsupportedMint.into());
+    }
+    let (decimals, _) = read_tile_mint(new_mint_info)?;
+
+    // Old tokens out (none if the Treasury never held any).
+    let old_balance = if treasury_old_info.data_is_empty() {
+        0
+    } else {
+        treasury_old_info.as_associated_token_account(treasury_info.key, old_mint_info.key)?.amount()
+    };
+    if old_balance > 0 {
+        ensure_ata(signer_info, signer_info, admin_old_info, old_mint_info, system_program, old_program, ata_program)?;
+        send_from_treasury(
+            treasury_info,
+            treasury_old_info,
+            old_mint_info,
+            admin_old_info,
+            old_program,
+            old_balance,
+            config.token_decimals as u8,
+        )?;
+    }
+
+    // New tokens in for what is still owed.
+    let owed = old_balance.saturating_sub(treasury.reserve).saturating_sub(treasury.vault[VAULT_GRID]);
+    ensure_ata(signer_info, treasury_info, treasury_new_info, new_mint_info, system_program, new_program, ata_program)?;
+    if owed > 0 {
+        transfer_checked(signer_info, admin_new_info, new_mint_info, treasury_new_info, new_program, owed, decimals)?;
+    }
+
+    treasury.reserve = 0;
+    treasury.vault[VAULT_GRID] = 0;
+    config.token_mint = new_mint;
+    config.token_program = *new_mint_info.owner;
+    config.token_decimals = decimals as u64;
     Ok(())
 }
 

@@ -51,6 +51,30 @@ pub fn set_tile(signer: Pubkey, index: u64, mint: Pubkey) -> Instruction {
     )
 }
 
+/// Switches `$GRID` to `new_mint`. Old Treasury tokens go to the admin's ATA; the admin pays in
+/// new tokens for what miners are still owed. `old_*` = current Config values.
+pub fn set_token_mint(signer: Pubkey, old_mint: Pubkey, old_program: Pubkey, new_mint: Pubkey, new_program: Pubkey) -> Instruction {
+    let treasury = treasury_pda().0;
+    ix(
+        vec![
+            AccountMeta::new(signer, true),
+            AccountMeta::new(config_pda().0, false),
+            AccountMeta::new(treasury, false),
+            AccountMeta::new_readonly(old_mint, false),
+            AccountMeta::new(ata(&treasury, &old_mint, &old_program), false),
+            AccountMeta::new(ata(&signer, &old_mint, &old_program), false),
+            AccountMeta::new_readonly(new_mint, false),
+            AccountMeta::new(ata(&signer, &new_mint, &new_program), false),
+            AccountMeta::new(ata(&treasury, &new_mint, &new_program), false),
+            AccountMeta::new_readonly(old_program, false),
+            AccountMeta::new_readonly(new_program, false),
+            AccountMeta::new_readonly(system_program::ID, false),
+            AccountMeta::new_readonly(spl_associated_token_account::ID, false),
+        ],
+        SetTokenMint {}.to_bytes(),
+    )
+}
+
 pub fn set_pause(signer: Pubkey, paused: bool) -> Instruction {
     ix(
         vec![AccountMeta::new(signer, true), AccountMeta::new(config_pda().0, false)],
