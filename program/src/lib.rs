@@ -10,6 +10,7 @@ mod claim_vault;
 mod close;
 mod deploy;
 mod fund_reserve;
+mod funds;
 mod reset;
 mod rng;
 mod swap;
@@ -27,6 +28,7 @@ use claim_vault::*;
 use close::*;
 use deploy::*;
 use fund_reserve::*;
+use funds::*;
 use reset::*;
 use rng::*;
 
@@ -61,6 +63,8 @@ pub fn process_instruction(
         GridInstruction::ClaimPot => process_claim_pot(accounts, data),
         GridInstruction::BuyAsset => process_buy_asset(accounts, data),
         GridInstruction::Buyback => process_buyback(accounts, data),
+        GridInstruction::Fund => process_fund(accounts, data),
+        GridInstruction::Withdraw => process_withdraw(accounts, data),
     }
 }
 

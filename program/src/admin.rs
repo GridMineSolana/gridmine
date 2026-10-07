@@ -220,7 +220,7 @@ pub fn process_withdraw_team(accounts: &[AccountInfo<'_>], data: &[u8]) -> Progr
     Ok(())
 }
 
-fn load_config_as_admin<'a>(
+pub(crate) fn load_config_as_admin<'a>(
     signer_info: &AccountInfo<'_>,
     config_info: &'a AccountInfo<'_>,
 ) -> Result<&'a mut Config, ProgramError> {

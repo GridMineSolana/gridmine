@@ -239,6 +239,46 @@ pub fn fund_reserve(signer: Pubkey, mint: Pubkey, token_program: Pubkey, amount:
     )
 }
 
+/// SOL bucket: `token` = None. Token bucket: `token` = (mint, token program); sends from `signer`'s ATA.
+pub fn fund(signer: Pubkey, bucket: u64, index: u64, amount: u64, token: Option<(Pubkey, Pubkey)>) -> Instruction {
+    let treasury = treasury_pda().0;
+    let mut accounts = vec![
+        AccountMeta::new(signer, true),
+        AccountMeta::new_readonly(config_pda().0, false),
+        AccountMeta::new(treasury, false),
+        AccountMeta::new_readonly(system_program::ID, false),
+    ];
+    if let Some((mint, token_program)) = token {
+        accounts.extend([
+            AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(ata(&signer, &mint, &token_program), false),
+            AccountMeta::new(ata(&treasury, &mint, &token_program), false),
+            AccountMeta::new_readonly(token_program, false),
+            AccountMeta::new_readonly(spl_associated_token_account::ID, false),
+        ]);
+    }
+    ix(accounts, Fund { bucket, index, amount }.to_bytes())
+}
+
+/// SOL bucket: `to` is any wallet, `token` = None. Token bucket: `to` is any token account of `mint`.
+pub fn withdraw(signer: Pubkey, bucket: u64, index: u64, amount: u64, to: Pubkey, token: Option<(Pubkey, Pubkey)>) -> Instruction {
+    let treasury = treasury_pda().0;
+    let mut accounts = vec![
+        AccountMeta::new(signer, true),
+        AccountMeta::new(config_pda().0, false),
+        AccountMeta::new(treasury, false),
+        AccountMeta::new(to, false),
+    ];
+    if let Some((mint, token_program)) = token {
+        accounts.extend([
+            AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(ata(&treasury, &mint, &token_program), false),
+            AccountMeta::new_readonly(token_program, false),
+        ]);
+    }
+    ix(accounts, Withdraw { bucket, index, amount }.to_bytes())
+}
+
 /// Pays the pot of `round_id` to `winner` (round.pot_winner). `signer` pays the winner's ATA rent.
 pub fn claim_pot(signer: Pubkey, round_id: u64, winner: Pubkey, mint: Pubkey, token_program: Pubkey) -> Instruction {
     let treasury = treasury_pda().0;

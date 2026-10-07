@@ -2,7 +2,7 @@ use steel::*;
 
 use crate::state::Params;
 
-/// PLAN §6.2: the 20 instructions.
+/// PLAN §6.2: the 22 instructions.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
 pub enum GridInstruction {
@@ -30,6 +30,8 @@ pub enum GridInstruction {
     SetPause = 17,
     WithdrawTeam = 18,
     SetTokenMint = 19,
+    Fund = 20,
+    Withdraw = 21,
 }
 
 /// Parses instruction args. Instruction data is not 8-byte aligned after the
@@ -197,6 +199,39 @@ pub struct WithdrawTeam {
     pub bucket: u64,
 }
 
+/// Treasury buckets for Fund / Withdraw. `index` picks the tile where noted.
+/// Not covered (owed to players): unclaimed pots and vault hits (`owed`), unrefined `$GRID`, Round/Miner/Automation SOL.
+pub const BUCKET_ADMIN_SOL: u64 = 0;
+pub const BUCKET_BUYBACK_SOL: u64 = 1;
+pub const BUCKET_VAULT_SOL: u64 = 2;
+pub const BUCKET_TEAM_SOL: u64 = 3;
+/// `index` = tile.
+pub const BUCKET_POT_SOL: u64 = 4;
+/// `index`: 0..25 = tile asset, 25 = `$GRID`.
+pub const BUCKET_VAULT_TOKENS: u64 = 5;
+/// `index` = tile.
+pub const BUCKET_POT_TOKENS: u64 = 6;
+/// `$GRID` emission reserve.
+pub const BUCKET_RESERVE: u64 = 7;
+
+/// Anyone. Adds SOL or tokens to a Treasury bucket.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct Fund {
+    pub bucket: u64,
+    pub index: u64,
+    pub amount: u64,
+}
+
+/// Admin. Sends `amount` out of a Treasury bucket to any account.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct Withdraw {
+    pub bucket: u64,
+    pub index: u64,
+    pub amount: u64,
+}
+
 instruction!(GridInstruction, Deploy);
 instruction!(GridInstruction, Automate);
 instruction!(GridInstruction, Checkpoint);
@@ -217,3 +252,5 @@ instruction!(GridInstruction, SetTile);
 instruction!(GridInstruction, SetPause);
 instruction!(GridInstruction, WithdrawTeam);
 instruction!(GridInstruction, SetTokenMint);
+instruction!(GridInstruction, Fund);
+instruction!(GridInstruction, Withdraw);
