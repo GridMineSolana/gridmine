@@ -4,7 +4,7 @@ use steel::*;
 use crate::admin::load_config_as_admin;
 use crate::token::{ensure_ata, send_from_treasury};
 
-/// Anyone. Adds SOL or tokens to a Treasury bucket. Token buckets credit the amount actually received.
+/// Admin or worker. Adds SOL or tokens to a Treasury bucket. Token buckets credit the amount actually received.
 pub fn process_fund(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult {
     let args = parse_args::<Fund>(data)?;
     let [signer_info, config_info, treasury_info, system_program, tokens @ ..] = accounts else {
@@ -14,6 +14,9 @@ pub fn process_fund(accounts: &[AccountInfo<'_>], data: &[u8]) -> ProgramResult 
     let config = config_info
         .has_seeds(&[CONFIG], &grid_api::ID)?
         .as_account::<Config>(&grid_api::ID)?;
+    if *signer_info.key != config.admin && *signer_info.key != config.worker {
+        return Err(GridError::NotAuthorized.into());
+    }
     let treasury = treasury_info
         .is_writable()?
         .has_seeds(&[TREASURY], &grid_api::ID)?
